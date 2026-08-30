@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<title>Teste do Parser de ROM</title>
+<style>
+  body { font-family: monospace; background: #111; color: #eee; padding: 20px; }
+  #output { white-space: pre-wrap; background: #000; padding: 12px; border: 1px solid #444; margin-top: 12px; }
+  .ok { color: #6f6; }
+  .fail { color: #f66; }
+  input[type=file] { color: #eee; }
+  nav a { color: #8cf; margin-right: 16px; }
+</style>
+</head>
+<body>
+  <nav><a href="index.html">Cabeçalho / Stats</a><a href="sprites.html">Explorador de Sprites</a></nav>
+  <h2>Teste: Parser de ROM (Fire Red / Leaf Green)</h2>
+  <p>Carregue seu .gba ou .zip. Nada é enviado pra nenhum servidor — tudo roda local no navegador.</p>
+  <input type="file" id="romFile" accept=".gba,.zip" />
+  <div id="output">Aguardando arquivo...</div>
+
+<script src="common.js"></script>
+<script>
+const out = document.getElementById("output");
+function log(html) { out.innerHTML += html + "\n"; }
+
+document.getElementById("romFile").addEventListener("change", async (e) => {
+  out.innerHTML = "";
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const result = await loadRomFile(file, log);
+  if (!result) return;
+  const { data, header } = result;
+  log("");
+
+  const offsets = KNOWN_OFFSETS[header.key];
+  if (!offsets) {
+    log(`<span class="fail">Não tenho offset conhecido pra versão ${header.key}. Precisa ser adicionado em KNOWN_OFFSETS.</span>`);
+    window.__lastRomData = data; // guarda pra outras páginas/testes usarem
+    return;
+  }
+
+  log(`Testando offset de base stats: 0x${offsets.baseStats.toString(16)}`);
+  const result = validateBulbasaur(data, offsets.baseStats);
+
+  if (result.ok) {
+    log(`<span class="ok">✔ Offset validado! Bulbasaur bateu com os stats esperados.</span>`);
+  } else {
+    log(`<span class="fail">✘ Offset incorreto pra essa ROM. Campos que não bateram: ${result.mismatches.join(", ")}</span>`);
+    log(`Lido: ${JSON.stringify(result.read)}`);
+    log(`Esperado: ${JSON.stringify(result.expected)}`);
+  }
+
+  log("");
+  log("Primeiras 5 espécies lidas com esse offset:");
+  for (let i = 1; i <= 5; i++) log(JSON.stringify(readSpecies(data, offsets.baseStats, i)));
+
+  window.__lastRomData = data; // guarda em memória pro sprites.html poder reusar se quiser (mesma aba)
+});
+</script>
+</body>
+</html>
