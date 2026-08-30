@@ -42,14 +42,14 @@ document.getElementById("romFile").addEventListener("change", async (e) => {
   }
 
   log(`Testando offset de base stats: 0x${offsets.baseStats.toString(16)}`);
-  const result = validateBulbasaur(data, offsets.baseStats);
+  const statsCheck = validateBulbasaur(data, offsets.baseStats);
 
-  if (result.ok) {
+  if (statsCheck.ok) {
     log(`<span class="ok">✔ Offset validado! Bulbasaur bateu com os stats esperados.</span>`);
   } else {
-    log(`<span class="fail">✘ Offset incorreto pra essa ROM. Campos que não bateram: ${result.mismatches.join(", ")}</span>`);
-    log(`Lido: ${JSON.stringify(result.read)}`);
-    log(`Esperado: ${JSON.stringify(result.expected)}`);
+    log(`<span class="fail">✘ Offset incorreto pra essa ROM. Campos que não bateram: ${statsCheck.mismatches.join(", ")}</span>`);
+    log(`Lido: ${JSON.stringify(statsCheck.read)}`);
+    log(`Esperado: ${JSON.stringify(statsCheck.expected)}`);
   }
 
   log("");
