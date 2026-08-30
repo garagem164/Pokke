@@ -259,3 +259,26 @@ async function extractFileByExtension(data, extensions) {
   return { filename: match.filename, bytes };
 }
 
+
+/**
+ * Procura, em toda a ROM, ocorrências de um ponteiro de 4 bytes (little-endian)
+ * que aponta pro offset de arquivo dado (offset + 0x08000000, que é como o GBA
+ * referencia endereços de ROM). Serve pra achar a "tabela" que referencia um
+ * sprite/dado que a gente já identificou visualmente, sem precisar adivinhar
+ * onde essa tabela está.
+ */
+function findPointerReferences(data, targetFileOffset, maxResults) {
+  const targetPointer = (targetFileOffset + 0x08000000) >>> 0;
+  const b0 = targetPointer & 0xff;
+  const b1 = (targetPointer >> 8) & 0xff;
+  const b2 = (targetPointer >> 16) & 0xff;
+  const b3 = (targetPointer >> 24) & 0xff;
+
+  const results = [];
+  for (let i = 0; i < data.length - 4 && results.length < maxResults; i++) {
+    if (data[i] === b0 && data[i+1] === b1 && data[i+2] === b2 && data[i+3] === b3) {
+      results.push(i);
+    }
+  }
+  return results;
+}
