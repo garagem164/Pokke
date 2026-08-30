@@ -72,6 +72,14 @@ document.getElementById("romFile").addEventListener("change", async (e) => {
     div.addEventListener("click", () => {
       log(`<span class="ok">Selecionado: offset 0x${c.offset.toString(16)}</span>`);
       navigator.clipboard?.writeText("0x" + c.offset.toString(16)).catch(() => {});
+
+      const refs = findPointerReferences(data, c.offset, 20);
+      if (refs.length === 0) {
+        log(`Nenhum ponteiro encontrado apontando pra esse offset (pode estar referenciado de um jeito diferente, ou é falso positivo do scanner).`);
+      } else {
+        log(`Encontrei ${refs.length} lugar(es) na ROM com ponteiro pra esse offset: ${refs.map(r => "0x"+r.toString(16)).join(", ")}`);
+        log(`Isso é provavelmente uma entrada de tabela. Anota esse(s) endereço(s) — é a pista pra achar a tabela completa de sprites.`);
+      }
     });
 
     grid.appendChild(div);
@@ -80,4 +88,3 @@ document.getElementById("romFile").addEventListener("change", async (e) => {
 </script>
 </body>
 </html>
-
