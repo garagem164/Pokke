@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<title>Explorador de Sprites</title>
+<style>
+  body { font-family: monospace; background: #111; color: #eee; padding: 20px; }
+  #output { white-space: pre-wrap; background: #000; padding: 12px; border: 1px solid #444; margin-top: 12px; }
+  .ok { color: #6f6; }
+  .fail { color: #f66; }
+  input[type=file] { color: #eee; }
+  nav a { color: #8cf; margin-right: 16px; }
+  #grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .thumb { background: #222; border: 1px solid #444; padding: 4px; text-align: center; cursor: pointer; }
+  .thumb:hover { border-color: #8cf; }
+  .thumb canvas { image-rendering: pixelated; width: 96px; height: 96px; background: repeating-conic-gradient(#333 0% 25%, #2a2a2a 0% 50%) 50% / 12px 12px; }
+  .thumb .offset { font-size: 10px; color: #999; margin-top: 4px; }
+  #status { color: #ff6; }
+</style>
+</head>
+<body>
+  <nav><a href="index.html">Cabeçalho / Stats</a><a href="sprites.html">Explorador de Sprites</a></nav>
+  <h2>Explorador de Sprites (64x64, 4bpp)</h2>
+  <p>Escaneia a ROM inteira procurando blocos LZ77 que descomprimem pra exatamente 2048 bytes (tamanho de um sprite 64x64 em 4bpp). Ainda sem paleta real — é escala de cinza, só pra reconhecer a <b>forma</b> do sprite. Clique numa miniatura pra ver o offset.</p>
+  <input type="file" id="romFile" accept=".gba,.zip" />
+  <div id="output">Aguardando arquivo...</div>
+  <div id="grid"></div>
+
+<script src="common.js"></script>
+<script>
+const out = document.getElementById("output");
+const grid = document.getElementById("grid");
+function log(html) { out.innerHTML += html + "\n"; }
+
+document.getElementById("romFile").addEventListener("change", async (e) => {
+  out.innerHTML = "";
+  grid.innerHTML = "";
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const result = await loadRomFile(file, log);
+  if (!result) return;
+  const { data } = result;
+
+  log("");
+  log('<span id="status">Escaneando ROM inteira (~16MB) procurando blocos de 2048 bytes descomprimidos... isso pode levar alguns segundos.</span>');
+
+  // dá um respiro pro navegador desenhar o log antes de travar na busca
+  await new Promise((r) => setTimeout(r, 30));
+
+  const t0 = performance.now();
+  const MAX_RESULTS = 300;
+  const candidates = scanForCompressedBlocks(data, 2048, MAX_RESULTS);
+  const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+
+  const statusEl = document.getElementById("status");
+  statusEl.innerHTML = `Encontrados ${candidates.length} candidatos em ${elapsed}s ${candidates.length >= MAX_RESULTS ? '(parou no limite de ' + MAX_RESULTS + ' — há mais na ROM)' : ''}.`;
+
+  for (const c of candidates) {
+    const div = document.createElement("div");
+    div.className = "thumb";
+
+    const canvas = document.createElement("canvas");
+    render4bppGrayscale(c.bytes, canvas);
+
+    const label = document.createElement("div");
+    label.className = "offset";
+    label.textContent = "0x" + c.offset.toString(16);
+
+    div.appendChild(canvas);
+    div.appendChild(label);
+    div.addEventListener("click", () => {
+      log(`<span class="ok">Selecionado: offset 0x${c.offset.toString(16)}</span>`);
+      navigator.clipboard?.writeText("0x" + c.offset.toString(16)).catch(() => {});
+    });
+
+    grid.appendChild(div);
+  }
+});
+</script>
+</body>
+</html>
+
